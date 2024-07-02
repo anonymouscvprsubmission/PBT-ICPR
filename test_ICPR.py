@@ -1,31 +1,23 @@
-try:
-    from collections import OrderedDict
-    
-    import numpy as np
-    from PIL import Image, ImageOps, ImageFilter
-    import cv2
-    from torchvision import transforms
-    from torch.nn import functional as F
-    from torch.utils.data import Dataset, DataLoader
-    import torch
-    from argparse import ArgumentParser
-    import einops
-    import torch
-    import torch.nn as nn
-    # from model.utils import get_2d_sincos_pos_embed
-    
-    import math
-    from einops import rearrange, repeat
-    from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-    import torch.nn.functional as F
-    import os
-except ImportError as e:
-    print("模块导入错误：", e)
-except ModuleNotFoundError as e:
-    print("模块未找到错误：", e)
-except Exception as e:
-    print("导入过程中发生了其他错误：", e)
-    
+from collections import OrderedDict
+import collections.abc
+import numpy as np
+from PIL import Image, ImageOps, ImageFilter
+# import cv2
+from torchvision import transforms
+from torch.nn import functional as F
+from torch.utils.data import Dataset, DataLoader
+import torch
+from argparse import ArgumentParser
+import einops
+import torch
+import torch.nn as nn
+from model.utils import get_2d_sincos_pos_embed
+
+import math
+from einops import rearrange, repeat
+# from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+import torch.nn.functional as F
+import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
@@ -39,7 +31,7 @@ def parse_args():
     parser = ArgumentParser(description='Implement of model')
 
     parser.add_argument('--dataset', type=str, default='./dataset')
-    parser.add_argument('--model_dir', type=str, default='./Best_nIoU_Epoch-160_IoU-0.0228_nIoU-0.1313.pth.tar')
+    parser.add_argument('--model_dir', type=str, default='./Best_mIoU_Epoch-120_IoU-0.0201_nIoU-0.1131.pth.tar')
     parser.add_argument('--save_dir', type=str, default='./mask')
     parser.add_argument('--bs', type=int, default=4)
     #
@@ -53,7 +45,13 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-
+def _ntuple(n):
+    def parse(x):
+        if isinstance(x, collections.abc.Iterable) and not isinstance(x, str):
+            return tuple(x)
+        return tuple(repeat(x, n))
+    return parse
+to_2tuple = _ntuple(2)
 class TestSetLoader(Dataset):
     """Iceberg Segmentation dataset."""
     NUM_CLASS = 1
@@ -101,7 +99,7 @@ class TestSetLoader(Dataset):
             idx = idx.split('.')[0]
         except:
             idx = idx
-        cv2.setNumThreads(0)
+        # cv2.setNumThreads(0)
 
         img_id = self._items[idx]  # idx：('../SIRST', 'Misc_70') 成对出现，因为我的workers设置为了2
         try:
@@ -112,13 +110,8 @@ class TestSetLoader(Dataset):
         img_path2  = self.images2+'/'+img_id+self.suffix
         try:
             img  = Image.open(img_path).convert('RGB')  ##由于输入的三通道、单通道图像都有，所以统一转成RGB的三通道，这也符合Unet等网络的期待尺寸
-
-        except FileNotFoundError as e:
-    # 文件未找到错误
-            print("文件未找到：", e)
-        except Exception as e:
-    # 其他所有类型的异常
-            print("加载过程中发生了错误：", e)
+        except:
+            img = Image.open(img_path2).convert('RGB')
         h, w = img.size
         # synchronized transform
         img= self._testval_sync_transform(img)
@@ -169,7 +162,37 @@ def window_reverse_test(windows, win_size, H, W, dilation_rate=1):
         x = x.permute(0, 3, 1, 4, 2, 5).contiguous().view(B, -1, H, W)
     return x
 
+class DropPath(nn.Module):
+    """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
+    """
+    def __init__(self, drop_prob: float = 0., scale_by_keep: bool = True):
+        super(DropPath, self).__init__()
+        self.drop_prob = drop_prob
+        self.scale_by_keep = scale_by_keep
 
+    def forward(self, x):
+        return drop_path(x, self.drop_prob, self.training, self.scale_by_keep)
+
+    def extra_repr(self):
+        return f'drop_prob={round(self.drop_prob,3):0.3f}'
+def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: bool = True):
+    """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
+
+    This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
+    the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
+    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for
+    changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use
+    'survival rate' as the argument.
+
+    """
+    if drop_prob == 0. or not training:
+        return x
+    keep_prob = 1 - drop_prob
+    shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+    random_tensor = x.new_empty(shape).bernoulli_(keep_prob)
+    if keep_prob > 0.0 and scale_by_keep:
+        random_tensor.div_(keep_prob)
+    return x * random_tensor
 
 def window_partition(x, win_size, dilation_rate=1):
     B, H, W, C = x.shape
@@ -198,6 +221,7 @@ def window_reverse(windows, win_size, H, W, dilation_rate=1):
     else:
         x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
     return x
+
 
 
 def bchw_to_blc(x):
@@ -1058,14 +1082,7 @@ def main(args):
                          token_mlp='leff', win_size=8, img_size=512, )
     model = model.to(device)
     print('model create')
-    try:
-        ckpt = torch.load(model_dir, map_location=device)
-    except FileNotFoundError as e:
-    # 文件未找到错误
-        print("文件未找到：", e)
-    except Exception as e:
-    # 其他所有类型的异常
-        print("加载过程中发生了错误：", e)
+    ckpt = torch.load(model_dir, map_location=device)
     model_weights = ckpt['state_dict']
     try:
         model.load_state_dict(ckpt['state_dict'], strict=True)
@@ -1110,7 +1127,9 @@ def main(args):
             except:
                 id = img_ids[step]
 
-            cv2.imwrite(save_dir + '/' + id + '.png', pred)
+            pred = Image.fromarray(pred, mode='L')
+            pred.save(os.path.join(save_dir, id + '.png'))
+            # cv2.imwrite(save_dir + '/' + id + '.png', pred)
             print(save_dir + '/' + id +'.png')
 
 
