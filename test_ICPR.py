@@ -1,23 +1,31 @@
-from collections import OrderedDict
-
-import numpy as np
-from PIL import Image, ImageOps, ImageFilter
-import cv2
-from torchvision import transforms
-from torch.nn import functional as F
-from torch.utils.data import Dataset, DataLoader
-import torch
-from argparse import ArgumentParser
-import einops
-import torch
-import torch.nn as nn
-# from model.utils import get_2d_sincos_pos_embed
-
-import math
-from einops import rearrange, repeat
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-import torch.nn.functional as F
-import os
+try:
+    from collections import OrderedDict
+    
+    import numpy as np
+    from PIL import Image, ImageOps, ImageFilter
+    import cv2
+    from torchvision import transforms
+    from torch.nn import functional as F
+    from torch.utils.data import Dataset, DataLoader
+    import torch
+    from argparse import ArgumentParser
+    import einops
+    import torch
+    import torch.nn as nn
+    # from model.utils import get_2d_sincos_pos_embed
+    
+    import math
+    from einops import rearrange, repeat
+    from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+    import torch.nn.functional as F
+    import os
+except ImportError as e:
+    print("模块导入错误：", e)
+except ModuleNotFoundError as e:
+    print("模块未找到错误：", e)
+except Exception as e:
+    print("导入过程中发生了其他错误：", e)
+    
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
@@ -104,8 +112,13 @@ class TestSetLoader(Dataset):
         img_path2  = self.images2+'/'+img_id+self.suffix
         try:
             img  = Image.open(img_path).convert('RGB')  ##由于输入的三通道、单通道图像都有，所以统一转成RGB的三通道，这也符合Unet等网络的期待尺寸
-        except:
-            img = Image.open(img_path2).convert('RGB')
+
+        except FileNotFoundError as e:
+    # 文件未找到错误
+            print("文件未找到：", e)
+        except Exception as e:
+    # 其他所有类型的异常
+            print("加载过程中发生了错误：", e)
         h, w = img.size
         # synchronized transform
         img= self._testval_sync_transform(img)
@@ -1045,7 +1058,14 @@ def main(args):
                          token_mlp='leff', win_size=8, img_size=512, )
     model = model.to(device)
     print('model create')
-    ckpt = torch.load(model_dir, map_location=device)
+    try:
+        ckpt = torch.load(model_dir, map_location=device)
+    except FileNotFoundError as e:
+    # 文件未找到错误
+        print("文件未找到：", e)
+    except Exception as e:
+    # 其他所有类型的异常
+        print("加载过程中发生了错误：", e)
     model_weights = ckpt['state_dict']
     try:
         model.load_state_dict(ckpt['state_dict'], strict=True)
