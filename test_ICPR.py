@@ -18,8 +18,8 @@ from einops import rearrange, repeat
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 import torch.nn.functional as F
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
 
 
@@ -31,7 +31,7 @@ def parse_args():
     parser = ArgumentParser(description='Implement of model')
 
     parser.add_argument('--dataset', type=str, default='./dataset')
-    parser.add_argument('--model_dir', type=str, default='./Best_mIoU_Epoch-120_IoU-0.0201_nIoU-0.1131.pth.tar')
+    parser.add_argument('--model_dir', type=str, default='./Best_nIoU_Epoch-160_IoU-0.0228_nIoU-0.1313.pth.tar')
     parser.add_argument('--save_dir', type=str, default='./mask')
     parser.add_argument('--bs', type=int, default=4)
     #
