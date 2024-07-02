@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 import einops
 import torch
 import torch.nn as nn
-from model.utils import get_2d_sincos_pos_embed
+# from model.utils import get_2d_sincos_pos_embed
 
 import math
 from einops import rearrange, repeat
