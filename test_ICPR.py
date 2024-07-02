@@ -45,13 +45,9 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def _ntuple(n):
-    def parse(x):
-        if isinstance(x, collections.abc.Iterable) and not isinstance(x, str):
-            return tuple(x)
-        return tuple(repeat(x, n))
-    return parse
-to_2tuple = _ntuple(2)
+
+def to_2tuple(x):
+    return (x, x)
 class TestSetLoader(Dataset):
     """Iceberg Segmentation dataset."""
     NUM_CLASS = 1
