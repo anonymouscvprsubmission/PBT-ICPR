@@ -32,7 +32,7 @@ def parse_args():
 
     parser.add_argument('--dataset', type=str, default='./dataset')
     parser.add_argument('--model_dir', type=str, default='./Best_nIoU_Epoch-160_IoU-0.0228_nIoU-0.1313.pth.tar')
-    parser.add_argument('--model_dir_uiu', type=str, default='./Best_mIoU_Epoch- 30_IoU-0.3915_nIoU-0.2250-UIU.pth.tar')
+    parser.add_argument('--model_dir_uiu', type=str, default='./Best_mIoU_Epoch-230_IoU-0.4290_nIoU-0.2664.pth.tar')
 
     parser.add_argument('--save_dir', type=str, default='./mask')
     parser.add_argument('--bs', type=int, default=4)
@@ -1640,9 +1640,15 @@ def main(args):
             predlist2 = []
             for i in range(num_iter):
                 img = images[i * bs:(i + 1) * bs, :, :, :] if (i + 1) * bs < images.shape[0] else images[i * bs:images.shape[0], :, :, :]
-                pred = model(img.to(device))
+                # pred = model(img.to(device))
+                # if isinstance(pred, list):
+                #     pred = pred[-1]
+                # predlist.append(pred)
+                img0 = torch.roll(img, shifts=(256, 256), dims=(2, 3))
+                pred = model2(img0.to(device))
                 if isinstance(pred, list):
                     pred = pred[-1]
+                pred = torch.roll(pred, shifts=(-256, -256), dims=(2, 3))
                 predlist.append(pred)
 
                 pred2 = model2(img.to(device))
