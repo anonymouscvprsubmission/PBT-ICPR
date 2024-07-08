@@ -31,8 +31,12 @@ def parse_args():
     parser = ArgumentParser(description='Implement of model')
 
     parser.add_argument('--dataset', type=str, default='./dataset')
-    parser.add_argument('--model_dir', type=str, default='./Best_nIoU_Epoch-160_IoU-0.0228_nIoU-0.1313.pth.tar')
-    parser.add_argument('--model_dir_uiu', type=str, default='./Best_mIoU_Epoch-230_IoU-0.4290_nIoU-0.2664.pth.tar')
+    # parser.add_argument('--model_dir', type=str, default='./Best_nIoU_Epoch-160_IoU-0.0228_nIoU-0.1313.pth.tar')
+    # parser.add_argument('--model_dir_uiu', type=str, default='./Best_mIoU_Epoch-230_IoU-0.4290_nIoU-0.2664.pth.tar')
+    parser.add_argument('--model_dir_uiu_al', type=str, default='./Best_nIoU_Epoch-380_IoU-0.2269_nIoU-0.2796.pth.tar')
+    parser.add_argument('--model_dir_uiu_ll', type=str, default='./Best_mIoU_Epoch-220_IoU-0.2820_nIoU-0.2382.pth.tar')
+    parser.add_argument('--model_dir_uiu_sn', type=str, default='./Best_mIoU_Epoch- 40_IoU-0.3546_nIoU-0.1962.pth.tar')
+    parser.add_argument('--model_dir_uiu_ss', type=str, default='./Best_nIoU_Epoch- 50_IoU-0.1752_nIoU-0.1416.pth.tar')
 
     parser.add_argument('--save_dir', type=str, default='./mask')
     parser.add_argument('--bs', type=int, default=4)
@@ -1576,8 +1580,12 @@ class UIUNET(nn.Module):
 def main(args):
     dataset_root = args.dataset
     test_txt = dataset_root + '/' + 'img_idx' + '/' + 'test.txt'
-    model_dir = args.model_dir
-    model_dir2 = args.model_dir_uiu
+    # model_dir = args.model_dir
+    model_dir1 = args.model_dir_uiu_al
+    model_dir2 = args.model_dir_uiu_ll
+    model_dir3 = args.model_dir_uiu_sn
+    model_dir4 = args.model_dir_uiu_ss
+
     save_dir = args.save_dir
     bs = args.bs
     if not os.path.exists(save_dir):
@@ -1591,27 +1599,34 @@ def main(args):
         f.close()
     valset = TestSetLoader(dataset_root, img_id=img_ids , base_size=512, crop_size=512)
     val_data = DataLoader(dataset=valset, batch_size=1, num_workers=0, drop_last=False, shuffle=False)
-    model = WindowPBTNet(num_classes=1, input_channels=3, num_blocks=[2, 2, 2, 2, 2],
-                         nb_filter=[16, 32, 64, 128, 256, 512, 1024],
-                         deep_supervision=False, depth=[2, 2, 2, 2, 2], drop=0.1, attn_drop=0.1, drop_path=0.1,
-                         mlp_ratio=4.,
-                         # heads=[[1, 1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1], [1, 1], [1]], token_projection='linear',
-                         heads=[[1, 1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1], [1, 1], [1]], token_projection='linear',
-                         token_mlp='leff', win_size=8, img_size=512, )
-    model = model.to(device)
+    # model = WindowPBTNet(num_classes=1, input_channels=3, num_blocks=[2, 2, 2, 2, 2],
+    #                      nb_filter=[16, 32, 64, 128, 256, 512, 1024],
+    #                      deep_supervision=False, depth=[2, 2, 2, 2, 2], drop=0.1, attn_drop=0.1, drop_path=0.1,
+    #                      mlp_ratio=4.,
+    #                      # heads=[[1, 1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1], [1, 1], [1]], token_projection='linear',
+    #                      heads=[[1, 1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1], [1, 1], [1]], token_projection='linear',
+    #                      token_mlp='leff', win_size=8, img_size=512, )
+    # model = model.to(device)
+    model1 = UIUNET(3, 1)
+    model1 = model1.to(device)
     model2 = UIUNET(3, 1)
     model2 = model2.to(device)
+    model3 = UIUNET(3, 1)
+    model3 = model3.to(device)
+    model4 = UIUNET(3, 1)
+    model4 = model4.to(device)
+
     print('model create')
-    ckpt = torch.load(model_dir, map_location=device)
+    ckpt = torch.load(model_dir1, map_location=device)
     model_weights = ckpt['state_dict']
     try:
-        model.load_state_dict(ckpt['state_dict'], strict=True)
+        model1.load_state_dict(ckpt['state_dict'], strict=True)
     except:
         new_dict = OrderedDict()
         for k, v in model_weights.items():
             name = k[7:]
             new_dict[name] = v
-        model.load_state_dict(new_dict, strict=True)
+        model1.load_state_dict(new_dict, strict=True)
 
     print('model loaded')
     ckpt2 = torch.load(model_dir2, map_location=device)
@@ -1626,52 +1641,161 @@ def main(args):
         model2.load_state_dict(new_dict, strict=True)
 
     print('model loaded')
+    ckpt3 = torch.load(model_dir3, map_location=device)
+    model_weights3 = ckpt3['state_dict']
+    try:
+        model3.load_state_dict(ckpt3['state_dict'], strict=True)
+    except:
+        new_dict = OrderedDict()
+        for k, v in model_weights3.items():
+            name = k[7:]
+            new_dict[name] = v
+        model3.load_state_dict(new_dict, strict=True)
+
+    print('model loaded')
+    ckpt4 = torch.load(model_dir4, map_location=device)
+    model_weights4 = ckpt4['state_dict']
+    try:
+        model4.load_state_dict(ckpt4['state_dict'], strict=True)
+    except:
+        new_dict = OrderedDict()
+        for k, v in model_weights4.items():
+            name = k[7:]
+            new_dict[name] = v
+        model4.load_state_dict(new_dict, strict=True)
+
+    print('model loaded')
     with torch.no_grad():
-        model.eval()
+        model1.eval()
         model2.eval()
+        model3.eval()
+        model4.eval()
         for step, data in enumerate(val_data):
             print(step)
             images, d = data
             images, d = images[0, :, :, :, :], d[0]
             H, W, h, w, size = d[0], d[1], d[2], d[3], d[4]
+            img_ori = window_reverse_test(images, int(size.item()), int(W.item()), int(H.item()))
+            img0 = torch.roll(img_ori, shifts=(256, 256), dims=(2, 3))
+            img0 = window_partition_test(img0, 512)
             num_iter = (images.shape[0]) // bs  if images.shape[0] % bs == 0 else (images.shape[0]) // bs + 1
             print(num_iter)
-            predlist = []
-            predlist2 = []
+            predlist1_1 = []
+            predlist1_2 = []
+            predlist2_1 = []
+            predlist2_2 = []
+            predlist3_1 = []
+            predlist3_2 = []
+            predlist4_1 = []
+            predlist4_2 = []
             for i in range(num_iter):
                 img = images[i * bs:(i + 1) * bs, :, :, :] if (i + 1) * bs < images.shape[0] else images[i * bs:images.shape[0], :, :, :]
-                # pred = model(img.to(device))
-                # if isinstance(pred, list):
-                #     pred = pred[-1]
-                # predlist.append(pred)
-                img0 = torch.roll(img, shifts=(256, 256), dims=(2, 3))
-                pred = model2(img0.to(device))
-                if isinstance(pred, list):
-                    pred = pred[-1]
-                pred = torch.roll(pred, shifts=(-256, -256), dims=(2, 3))
-                predlist.append(pred)
-
-                pred2 = model2(img.to(device))
-                if isinstance(pred2, list):
-                    pred2 = pred2[-1]
-                predlist2.append(pred2)
-
-            pred = torch.cat(predlist, dim=0)
-            pred = window_reverse_test(pred, int(size.item()), int(W.item()), int(H.item()))
-            pred = pred[:, :, :int(w.item()), :int(h.item())]
-
-            pred2 = torch.cat(predlist2, dim=0)
-            pred2 = window_reverse_test(pred2, int(size.item()), int(W.item()), int(H.item()))
-            pred2 = pred2[:, :, :int(w.item()), :int(h.item())]
+                img_shift = img0[i * bs:(i + 1) * bs, :, :, :] if (i + 1) * bs < img0.shape[0] else img0[i * bs:img0.shape[0], :, :, :]
 
 
-            pred[pred < 0] = 0
-            pred[pred > 0] = 1
+                pred1_1 = model1(img.to(device))
+                if isinstance(pred1_1, list):
+                    pred1_1 = pred1_1[-1]
+                predlist1_1.append(pred1_1)
 
-            pred2[pred2 < 0] = 0
-            pred2[pred2 > 0] = 1
+                pred1_2 = model1(img_shift.to(device))
+                if isinstance(pred1_2, list):
+                    pred1_2 = pred1_2[-1]
+                predlist1_2.append(pred1_2)
 
-            pred = pred + pred2
+                pred2_1 = model2(img.to(device))
+                if isinstance(pred2_1, list):
+                    pred2_1 = pred2_1[-1]
+                predlist2_1.append(pred2_1)
+
+                pred2_2 = model2(img_shift.to(device))
+                if isinstance(pred2_2, list):
+                    pred2_2 = pred2_2[-1]
+                predlist2_2.append(pred2_2)
+
+                pred3_1 = model3(img.to(device))
+                if isinstance(pred3_1, list):
+                    pred3_1 = pred3_1[-1]
+                predlist3_1.append(pred3_1)
+
+                pred3_2 = model3(img_shift.to(device))
+                if isinstance(pred3_2, list):
+                    pred3_2 = pred3_2[-1]
+                predlist3_2.append(pred3_2)
+
+                pred4_1 = model4(img.to(device))
+                if isinstance(pred4_1, list):
+                    pred4_1 = pred4_1[-1]
+                predlist4_1.append(pred4_1)
+
+                pred4_2 = model4(img_shift.to(device))
+                if isinstance(pred4_2, list):
+                    pred4_2 = pred4_2[-1]
+                predlist4_2.append(pred4_2)
+
+
+
+            pred1_1 = torch.cat(predlist1_1, dim=0)
+            pred1_1 = window_reverse_test(pred1_1, int(size.item()), int(W.item()), int(H.item()))
+            pred1_1 = pred1_1[:, :, :int(w.item()), :int(h.item())]
+
+            pred1_2 = torch.cat(predlist1_2, dim=0)
+            pred1_2 = window_reverse_test(pred1_2, int(size.item()), int(W.item()), int(H.item()))
+            pred1_2 = torch.roll(pred1_2, shifts=(-256, -256), dims=(2, 3))
+            pred1_2 = pred1_2[:, :, :int(w.item()), :int(h.item())]
+
+            pred2_1 = torch.cat(predlist2_1, dim=0)
+            pred2_1 = window_reverse_test(pred2_1, int(size.item()), int(W.item()), int(H.item()))
+            pred2_1 = pred2_1[:, :, :int(w.item()), :int(h.item())]
+
+            pred2_2 = torch.cat(predlist2_2, dim=0)
+            pred2_2 = window_reverse_test(pred2_2, int(size.item()), int(W.item()), int(H.item()))
+            pred2_2 = torch.roll(pred2_2, shifts=(-256, -256), dims=(2, 3))
+            pred2_2 = pred2_2[:, :, :int(w.item()), :int(h.item())]
+
+            pred3_1 = torch.cat(predlist3_1, dim=0)
+            pred3_1 = window_reverse_test(pred3_1, int(size.item()), int(W.item()), int(H.item()))
+            pred3_1 = pred3_1[:, :, :int(w.item()), :int(h.item())]
+
+            pred3_2 = torch.cat(predlist3_2, dim=0)
+            pred3_2 = window_reverse_test(pred3_2, int(size.item()), int(W.item()), int(H.item()))
+            pred3_2 = torch.roll(pred3_2, shifts=(-256, -256), dims=(2, 3))
+            pred3_2 = pred3_2[:, :, :int(w.item()), :int(h.item())]
+
+            pred4_1 = torch.cat(predlist4_1, dim=0)
+            pred4_1 = window_reverse_test(pred4_1, int(size.item()), int(W.item()), int(H.item()))
+            pred4_1 = pred4_1[:, :, :int(w.item()), :int(h.item())]
+
+            pred4_2 = torch.cat(predlist4_2, dim=0)
+            pred4_2 = window_reverse_test(pred4_2, int(size.item()), int(W.item()), int(H.item()))
+            pred4_2 = torch.roll(pred4_2, shifts=(-256, -256), dims=(2, 3))
+            pred4_2 = pred4_2[:, :, :int(w.item()), :int(h.item())]
+
+            pred1_1[pred1_1 < 0] = 0
+            pred1_1[pred1_1 > 0] = 1
+
+            pred1_2[pred1_2 < 0] = 0
+            pred1_2[pred1_2 > 0] = 1
+
+            pred2_1[pred2_1 < 0] = 0
+            pred2_1[pred2_1 > 0] = 1
+
+            pred2_2[pred2_2 < 0] = 0
+            pred2_2[pred2_2 > 0] = 1
+
+            pred3_1[pred3_1 < 0] = 0
+            pred3_1[pred3_1 > 0] = 1
+
+            pred3_2[pred3_2 < 0] = 0
+            pred3_2[pred3_2 > 0] = 1
+
+            pred4_1[pred4_1 < 0] = 0
+            pred4_1[pred4_1 > 0] = 1
+
+            pred4_2[pred4_2 < 0] = 0
+            pred4_2[pred4_2 > 0] = 1
+
+            pred = pred1_1 + pred2_1 + pred3_1 + pred4_1 + pred1_2 + pred2_2 + pred3_2 + pred4_2
             pred[pred > 0] = 1
 
             pred = pred[0, 0, :, :]
