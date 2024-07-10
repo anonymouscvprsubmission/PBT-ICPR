@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='./dataset')
     # parser.add_argument('--model_dir', type=str, default='./Best_nIoU_Epoch-160_IoU-0.0228_nIoU-0.1313.pth.tar')
     # parser.add_argument('--model_dir_uiu', type=str, default='./Best_mIoU_Epoch-230_IoU-0.4290_nIoU-0.2664.pth.tar')
-    parser.add_argument('--model_dir_uiu_al', type=str, default='./Best_mIoU_Epoch-230_IoU-0.4290_nIoU-0.2664.pth.tar')
+    parser.add_argument('--model_dir_uiu_al', type=str, default='./Best_nIoU_Epoch-440_IoU-0.4286_nIoU-0.2962.pth.tar')
     parser.add_argument('--model_dir_uiu_ll', type=str, default='./Best_mIoU_Epoch-390_IoU-0.4423_nIoU-0.3010.pth.tar')
     parser.add_argument('--model_dir_uiu_sn', type=str, default='./Best_mIoU_Epoch- 40_IoU-0.3546_nIoU-0.1962.pth.tar')
     parser.add_argument('--model_dir_uiu_ss', type=str, default='./Best_nIoU_Epoch- 50_IoU-0.1752_nIoU-0.1416.pth.tar')
